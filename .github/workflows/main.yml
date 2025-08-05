@@ -9,15 +9,19 @@ on:
       - master
 
 jobs:
-  test:
+  docker-tests:
+    name: Run Docker Tests
     runs-on: ubuntu-latest
 
     steps:
       # 1. Клонируем репозиторий
-      - uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
       # 2. Собираем образ (аналог before_install в Travis)
-      - run: docker build -t skir232232/docker-react -f Dockerfile.dev .
+      - name: Build Docker image
+        run: docker build -t skir232232/docker-react -f Dockerfile.dev .
 
       # 3. Запускаем тесты (аналог script в Travis)
-      - run: docker run -e CI=true skir232232/docker-react npm run test
+      - name: Run tests in Docker
+        run: docker run -e CI=true skir232232/docker-react npm run test
