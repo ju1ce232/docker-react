@@ -1,27 +1,36 @@
-name: Docker React CI
-
+name: Deploy Frontend
 on:
   push:
     branches:
       - master
-  pull_request:
-    branches:
-      - master
 
 jobs:
-  docker-tests:
-    name: Run Docker Tests
+  build:
     runs-on: ubuntu-latest
-
     steps:
-      # 1. Клонируем репозиторий
-      - name: Checkout repository
-        uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      # 2. Собираем образ (аналог before_install в Travis)
-      - name: Build Docker image
+      - name: Docker login
+        run: docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build Docker image (dev)
         run: docker build -t skir232232/docker-react -f Dockerfile.dev .
 
-      # 3. Запускаем тесты (аналог script в Travis)
-      - name: Run tests in Docker
-        run: docker run -e CI=true skir232232/docker-react npm run test
+      - name: Run tests
+        run: docker run -e CI=true skir232232/docker-react npm test
+
+      - name: Generate deployment package
+        run: zip -r ${{ github.sha }}.zip . -x '*.git*'
+
+      - name: Deploy to EB
+        uses: einaregilsson/beanstalk-deploy@v21
+        with:
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY }}
+          aws_secret_key: ${{ secrets.AWS_SECRET_KEY }}
+          application_name: frontend
+          environment_name: Frontend-env
+          existing_bucket_name: elasticbeanstalk-eu-north-1-076276934545
+          region: eu-north-1
+          version_label: ${{ github.sha }}
+          deployment_package: ${{ github.sha }}.zip
